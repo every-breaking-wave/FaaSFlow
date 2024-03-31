@@ -68,8 +68,7 @@ class Template:
         # self.lock.release()
         # st = time.time()
         try:
-            container = Container.create(self.client,
-                                         self.template_info.image_name,
+            container = Container.create(self.template_info.image_name,
                                          self.template_info.blocks.keys(),
                                          self.port_manager.allocate(),
                                          'exec',
@@ -113,6 +112,7 @@ class Template:
     def run_block(self, container: Container, request: RequestInfo):
         # self.upd(request.request_id, request.block_name, container)
         st = time.time()
+        print("run block", request.block_name, request.template_name, request.request_id, 'is using idle block')
         delay_time = container.run_block(request.request_id, request.workflow_name, request.template_name,
                                          request.templates_infos, request.block_name, request.block_inputs,
                                          request.block_infos)
@@ -121,6 +121,7 @@ class Template:
         if self.template_info.gc == 'True' or self.template_info.gc == True:
             container.run_gc()
         if delay_time < 0.005 or config.DISABLE_PRESSURE_AWARE:
+            # 加入到idle_containers
             self.put_container(container)
         else:
             gevent.spawn_later(delay_time, self.put_container, container)
@@ -192,10 +193,13 @@ class Template:
             return
         request = self.request_queue.pop(0)
         # print('Allocating a block...')
+        
+        print("dispatch_request", request.block_name, request.template_name, request.request_id, 'is using idle block')
 
         container = self.get_idle_container(request.block_name)
 
         if container is None:
+            print(request.block_name, request.template_name, request.request_id, 'is creating new container')
             container = self.create_container(request.block_name)
         else:
             pass

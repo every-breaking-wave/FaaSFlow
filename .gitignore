@@ -3,3 +3,5 @@ __pycache__/
 *.asc
 .idea
 tmp/
+logs/*
+test/result/*

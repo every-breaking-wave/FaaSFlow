@@ -60,6 +60,7 @@ if __name__ == '__main__':
     sock_path = os.path.join(config.FILE_CONTROLLER_PATH, 'transfer.sock')
     if os.path.exists(sock_path):
         os.unlink(sock_path)
+    print("sock_path:", sock_path)
     server = socketserver.ThreadingUnixStreamServer(sock_path, MyServer)
     server.serve_forever()
     # server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

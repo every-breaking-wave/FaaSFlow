@@ -79,7 +79,7 @@ class WorkerSPManager:
         self.flow_monitor = flow_monitor
         self.incoming_data_queue: List[DataInfo] = []
         self.lock = gevent.lock.BoundedSemaphore()
-        self.kafka_client = pykafka.KafkaClient(hosts=config.KAFKA_URL, use_greenlets=True)
+        # self.kafka_client = pykafka.KafkaClient(hosts=config.KAFKA_URL, use_greenlets=True)
         gevent.spawn_later(dispatch_interval, self.dispatch_incoming_data)
         # min_port += 5000
 
@@ -543,49 +543,3 @@ class WorkerSPManager:
                 'datas': datas,
                 'from_virtual': from_virtual}
         requests.post(remote_url, json=data)
-
-    # def check_runnable(self, state: WorkflowState, workflow_name, function_name):
-    #     return state.function_predecessors_cnt[function_name] == len(
-    #         self.workflows_info[workflow_name].functions_predecessors[function_name])
-
-    # def send_data_to_container(self, request_id, workflow_name, function_name, datas, datatype):
-    #     self.function_manager.send_data(request_id, workflow_name, function_name, datas, datatype)
-    #     state = self.workflows_state[request_id]
-    #     state.lock.acquire()
-    #     state.function_predecessors_cnt[function_name] += len(datas)
-    #     if state.function_predecessors_cnt[function_name] == len(
-    #             self.workflows_info[workflow_name].functions_predecessors[function_name]):
-    #         state.lock.release()
-    #         self.trigger_function_local(request_id, workflow_name, function_name)
-    #     else:
-    #         state.lock.release()
-    #
-    # def allocate_container(self, request_id, workflow_name, function_name):
-    #     state = self.workflows_state[request_id]
-    #     state.lock.acquire()
-    #     if state.containers_state[function_name] == 'NA':
-    #         state.containers_state[function_name] = 'ALLOCATING'
-    #         state.lock.release()
-    #     else:
-    #         state.lock.release()
-    #         return
-    #     print('allocating', request_id, workflow_name, function_name)
-    #     self.function_manager.allocate(request_id, workflow_name, function_name,
-    #                                    self.workflows_info[workflow_name].functions_infos[function_name])
-    # if state.function_predecessors_cnt[function_name] == len(
-    #         self.workflows_info[workflow_name].functions_predecessors[function_name]):
-    #     state.lock.acquire()
-    #     if function_name not in state.function_executed:
-    #         state.function_executed.add(function_name)
-    #         state.lock.release()
-    #         self.run_function(request_id, workflow_name, function_name)
-    #     else:
-    #         state.lock.release()
-
-    # def run_block(self, request_id, workflow_name, template_name, block_name):
-    #     self.run_normal(request_id, workflow_name, template_name, block_name)
-
-    # def run_normal(self, request_id, workflow_name, template_name, block_name):
-    #     self.function_manager.run(request_id, workflow_name, template_name, block_name,
-    #                               self.workflows_state[request_id].templates_blocks_inputDatas[template_name][
-    #                                   block_name])

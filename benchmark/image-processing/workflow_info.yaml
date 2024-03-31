@@ -1,0 +1,16 @@
+workflow_name: image-processing
+global_inputs:
+  $USER.start:
+    type: NORMAL
+    dest:
+      image-processing: { block_0: { start } }
+templates:
+  image-processing:
+    blocks:
+      block_0:
+        type: NORMAL
+        input_datas:
+          start: { type: NORMAL }
+        output_datas:
+          img:
+            type: NORMAL

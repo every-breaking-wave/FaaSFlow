@@ -72,14 +72,6 @@ def socket_server():
 @app.route('/commit_inter_data', methods=['POST'])
 def handle_inter_data_commit():
     data = request.get_json(force=True, silent=True)
-    # print('---')
-    # print('get inter_data from {} {} {} {}'.format(data['block_name'], data['template_name'], data['workflow_name'],
-    #                                                data['request_id']))
-    # print(data['datas'].keys(), 'time cost during transmit: ', time.time() - data['post_time'])
-    # for k, v in data['datas'].items():
-    #     if 'debug' in k:
-    #         print(k, v)
-    # print()
     dispatcher.receive_incoming_data(data['request_id'], data['workflow_name'], data['template_name'],
                                      data['block_name'], data['datas'], from_local=True)
     return 'OK', 200
@@ -88,6 +80,7 @@ def handle_inter_data_commit():
 @app.route('/transfer_data', methods=['POST'])
 def transfer_data():
     data = request.get_json(force=True, silent=True)
+    print("receive data", data)
     from_virtual = None
     if 'from_virtual' in data:
         from_virtual = data['from_virtual']

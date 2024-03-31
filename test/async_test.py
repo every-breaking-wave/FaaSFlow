@@ -33,6 +33,7 @@ def post_request(request_id, workflow_name):
                     'input_datas': {'$USER.start': {'datatype': 'entity', 'val': None, 'output_type': 'NORMAL'}}}
     # print('--firing--', request_id)
     st = time.time()
+    print("request_id", request_id, "workflow_name", workflow_name, "st", st)
     r = requests.post(gateway_url.format('run'), json=request_info)
     ed = time.time()
     if st > test_start + pre_time:
@@ -141,10 +142,10 @@ def finish_worker(addr):
 
 
 def test_to_one(workflow_name, rpm, duration):
-    repo.clear_couchdb_workflow_latency()
-    repo.clear_couchdb_results()
-    r = requests.post(f'http://{config.GATEWAY_IP}:7000/clear')
-    assert r.status_code == 200
+    # repo.clear_couchdb_workflow_latency()
+    # repo.clear_couchdb_results()
+    # r = requests.post(f'http://{config.GATEWAY_IP}:7000/clear')
+    # assert r.status_code == 200
     threads_ = []
     for addr in config.WORKER_ADDRS:
         t = threading.Thread(target=clean_worker, args=(addr, ))
@@ -160,6 +161,7 @@ def test_to_one(workflow_name, rpm, duration):
     test_start = time.time()
     idx = 0
     while time.time() - test_start < pre_time + duration:
+        print("current time - test_start", time.time() - test_start)
         gevent.spawn(post_request, 'request_' + str(idx).rjust(4, '0'), workflow_name)
         idx += 1
         delta = time.time() - test_start
@@ -188,16 +190,20 @@ def test_to_all():
     # target_workflow = {'recognizer': {1: 10, 2: 10, 4: 10, 7: 10, 8: 10, 9: 10, 10: 10},
     #                    'wordcount': {1: 5, 2: 5, 4: 5, 8: 5, 16: 5, 19: 5, 20: 5, 21: 5, 22: 5},
     #                    'video': {1: 10, 2: 10, 4: 10, 8: 10, 9: 10, 10: 10, 11: 10}}
+    # target_workflow = {
+    #     'svd': {10: 5, 20: 5, 40: 5, 60: 5, 80: 5, 100: 5}
+    #     }
     target_workflow = {
-        'svd': {10: 5, 20: 5, 40: 5, 60: 5, 80: 5, 100: 5}
-        }
-    target_workflow = {'recognizer': {10: 1},
-                       'wordcount': {10: 1},
-                       'svd': {10: 1},
-                       'video': {4: 1}}
+                        # 'linpack': {10: 1},
+                        'image-processing': {10: 1},
+                    #    'recognizer': {10: 1},
+                    #    'wordcount': {10: 1},
+                    #    'svd': {10: 1},
+                    #    'video': {4: 1}
+                       }
     for workflow_name in target_workflow:
         for rpm in target_workflow[workflow_name]:
-            test_to_one(workflow_name, rpm, 60 * target_workflow[workflow_name][rpm])
+            test_to_one(workflow_name, rpm, 30 * target_workflow[workflow_name][rpm])
 
 
 test_to_all()

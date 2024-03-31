@@ -38,10 +38,12 @@ def start():
         wc_cpu = inp['wc_cpu']
     sensitivity_set(wc_cpu)
 
-    os.system('docker rm -f $(docker ps -aq)')
-    os.system('service docker restart')
-    os.system('docker run -itd -p 6379:6379 --name redis redis')
+    print('clearing')
+    # os.system('docker rm -f $(docker ps -aq)')
+    # os.system('sudo service docker restart')
+    os.system('sudo docker run -itd -p 6379:6379 --name redis redis')
     time.sleep(5)
+    print("run proxy")
     processes[0] = subprocess.Popen(['python3', 'proxy.py', addr, '8000'])
     time.sleep(20)
     processes[1] = subprocess.Popen(['python3', 'disk_reader.py'])

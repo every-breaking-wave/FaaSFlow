@@ -40,26 +40,8 @@ def prefetch_data():
         for i in range(chunk_num):
             # st = time.time()
             message = consumer.consume()[0]
-            # while message.error():
-            #     assert i == 0
-            #     print(message.error())
-            #     time.sleep(0.005)
-            #     consumer.assign([TopicPartition(topic, partition_idx, offset=start_offset)])
-            #     message = consumer.consume()[0]
             chunk_data = message.value()
-            # tmp = json.loads(chunk_data)
-            # print(db_key, tmp['db_key'], tmp['idx'], i, chunk_num)
-            # chunk_data = tmp['val'].encode()
-            # size += len(chunk_data)
             f.write(chunk_data)
-            # expect_time = len(chunk_data) / 10485760
-            # ed = time.time()
-            # if config.KAFKA_CHUNK_TEST and ed - st < expect_time:
-            #     time.sleep(expect_time - (ed - st))
-    # ed = time.time()
-    # consumer.unassign()
-    # consumers.append(consumer)
-    # print('prefetch time:', ed - st, 'prepare_time:', mid - st, 'size', size)
     return 'OK', 200
 
 

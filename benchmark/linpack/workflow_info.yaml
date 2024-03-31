@@ -1,0 +1,16 @@
+workflow_name: linpack
+global_inputs:
+  $USER.start:
+    type: NORMAL
+    dest:
+      linpack: { block_0: { start } }
+templates:
+  linpack:
+    blocks:
+      block_0:
+        type: NORMAL
+        input_datas:
+          start: { type: NORMAL }
+        output_datas:
+          img:
+            type: NORMAL

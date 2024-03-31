@@ -1,10 +1,10 @@
 # In template, functions are across different workflows.
 import os.path
-
-KAFKA_IP = '10.10.1.2'
-GATEWAY_IP = '10.10.1.1'
-COUCHDB_IP = '10.10.1.2'
-WORKER_ADDRS = ['10.10.1.3', '10.10.1.4', '10.10.1.5']
+# TencentCloud : 129.211.26.43
+KAFKA_IP = '129.211.26.43'
+GATEWAY_IP = '127.0.0.1'
+COUCHDB_IP = '129.211.26.43'
+WORKER_ADDRS = ['127.0.0.1']
 
 COUCHDB_URL = f'http://openwhisk:openwhisk@{COUCHDB_IP}:5984/'
 REDIS_HOST = '127.0.0.1'
@@ -17,10 +17,13 @@ GATEWAY_URL = f'{GATEWAY_IP}:7000'
 
 FUNCTIONS_INFO_PATH = '../../benchmark'
 WORKFLOWS_INFO_PATH = {
-                       'video': os.path.expanduser('~/FaaSFlow/benchmark/video'),
-                       'wordcount': os.path.expanduser('~/FaaSFlow/benchmark/wordcount'),
-                       'recognizer': os.path.expanduser('~/FaaSFlow/benchmark/recognizer'),
-                       'svd': os.path.expanduser('~/FaaSFlow/benchmark/svd')}
+                       'linpack': os.path.expanduser('~/FaaSFlow/benchmark/linpack'),
+                       'image-processing': os.path.expanduser('~/FaaSFlow/benchmark/image-processing'),
+                    #    'video': os.path.expanduser('~/FaaSFlow/benchmark/video'),
+                    #    'wordcount': os.path.expanduser('~/FaaSFlow/benchmark/wordcount'),
+                    #    'recognizer': os.path.expanduser('~/FaaSFlow/benchmark/recognizer'),
+                    #    'svd': os.path.expanduser('~/FaaSFlow/benchmark/svd'),
+                       }
 if os.path.exists('/state/partition2/FaaSFlow'):
     PREFETCH_POOL_PATH = '/state/partition2/FaaSFlow/prefetch_pool'
     FILE_CONTROLLER_PATH = '/state/partition2/FaaSFlow/file_controller'

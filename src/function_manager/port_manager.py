@@ -5,6 +5,8 @@ class PortManager:
     def allocate(self):
         if len(self.port_list) == 0:
             raise Exception('No available port!')
+        ret = self.port_list[0]
+        print('Allocate port:', ret)
         return self.port_list.pop(0)
 
     def put(self, port):

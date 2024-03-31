@@ -13,7 +13,11 @@ from store import Store
 import container_config
 
 source_file = 'main.py'
-db = couchdb.Server(container_config.COUCHDB_URL)['results']
+print("container_config.COUCHDB_URL", container_config.COUCHDB_URL)
+server = couchdb.Server(container_config.COUCHDB_URL)
+# db = server['results']
+db = server.__getitem__('results')
+# db = couchdb.Server(container_config.COUCHDB_URL)['results']
 latency_db = couchdb.Server(container_config.COUCHDB_URL)['workflow_latency']
 redis_db = redis.StrictRedis(host=container_config.REDIS_HOST, port=container_config.REDIS_PORT,
                              db=container_config.REDIS_DB)
