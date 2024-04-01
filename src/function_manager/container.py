@@ -119,6 +119,7 @@ class Container:
                 print(
                     "wait_start, send init request to container ip:",
                     self.pod.status.pod_ip,
+                    "port", default_pod_port,
                 )
                 r = requests.get(
                     base_url.format(self.pod.status.pod_ip, default_pod_port, "init"),

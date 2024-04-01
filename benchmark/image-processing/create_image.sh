@@ -5,4 +5,4 @@ docker build -t $image_name ~/FaaSFlow/benchmark/template_functions/$image_name
 image_id=$(docker images -q $image_name)
 
 # 转为ctr image
-/script/docker-2-ctr.sh $image_id
+sudo /script/docker-2-ctr.sh $image_id

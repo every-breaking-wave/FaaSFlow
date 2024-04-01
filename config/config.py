@@ -1,9 +1,8 @@
 # In template, functions are across different workflows.
 import os.path
-# TencentCloud : 129.211.26.43
-KAFKA_IP = '129.211.26.43'
+KAFKA_IP = '10.42.0.1'
 GATEWAY_IP = '127.0.0.1'
-COUCHDB_IP = '129.211.26.43'
+COUCHDB_IP = '10.42.0.1'
 WORKER_ADDRS = ['127.0.0.1']
 
 COUCHDB_URL = f'http://openwhisk:openwhisk@{COUCHDB_IP}:5984/'

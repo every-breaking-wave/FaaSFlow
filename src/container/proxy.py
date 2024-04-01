@@ -31,7 +31,7 @@ blocks = Block.parse(config.BLOCKS_INFO_PATH)
 store_queue = queue.Queue()
 # store_queue = []
 kafka_topic_ids = [str(uuid.uuid4()) for i in range(container_config.KAFKA_NUM_TOPICS)]
-admin = KafkaAdminClient(bootstrap_servers=container_config.KAFKA_URL)
+# admin = KafkaAdminClient(bootstrap_servers=container_config.KAFKA_URL)
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 
@@ -152,9 +152,9 @@ def run_block():
 
 
 if __name__ == '__main__':
-    admin.create_topics(
-        [NewTopic(kafka_topic_id, container_config.KAFKA_NUM_PARTITIONS, 1) for kafka_topic_id in kafka_topic_ids])
-    admin.close()
+    # admin.create_topics(
+    #     [NewTopic(kafka_topic_id, container_config.KAFKA_NUM_PARTITIONS, 1) for kafka_topic_id in kafka_topic_ids])
+    # admin.close()
     store = bypass_store.Store()
     t = threading.Thread(target=store.get_block_output, args=(store_queue, kafka_topic_ids))
     t.start()

@@ -149,8 +149,8 @@ class Store:
         kafka_topic_idx = 0
         kafka_partition_idx = 0
         self.kafka_topic_ids = kafka_topic_ids
-        self.kafka_producer = Producer({'bootstrap.servers': container_config.KAFKA_URL,
-                                        'enable.idempotence': True})
+        # self.kafka_producer = Producer({'bootstrap.servers': container_config.KAFKA_URL,
+        #                                 'enable.idempotence': True})
         # threading.Thread(target=self.dispatch, args=(process_queue,)).start()
 
         # client = pykafka.KafkaClient(hosts=container_config.KAFKA_URL)
