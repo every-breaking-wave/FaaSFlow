@@ -37,7 +37,7 @@ class Container:
 
     @classmethod
     def create(
-        cls, image_name, blocks_name, port, attr, cpus, parallel_limit, KAFKA_CHUNK_SIZE
+        cls, image_name, workflow_name, blocks_name, port, attr, cpus, parallel_limit, KAFKA_CHUNK_SIZE
     ) -> "Container":
         # 加载k3s kubeconfig
         # 生成一个随机的字符串作为Pod的名称
@@ -51,7 +51,7 @@ class Container:
         pod = client.V1Pod(
             api_version="v1",
             kind="Pod",
-            metadata=client.V1ObjectMeta(name=pod_name, labels={"workflow": "true"}),
+            metadata=client.V1ObjectMeta(name=pod_name, labels={"workflow": "true", "workflow_name": workflow_name}),
             spec=client.V1PodSpec(
                 containers=[
                     client.V1Container(
@@ -116,11 +116,6 @@ class Container:
     def wait_start(self):
         while True:
             try:
-                print(
-                    "wait_start, send init request to container ip:",
-                    self.pod.status.pod_ip,
-                    "port", default_pod_port,
-                )
                 r = requests.get(
                     base_url.format(self.pod.status.pod_ip, default_pod_port, "init"),
                     json={
@@ -130,6 +125,7 @@ class Container:
                     },
                 )
                 if r.status_code == 200:
+                    print("Container init success.")
                     break
             except Exception:
                 pass
@@ -232,8 +228,6 @@ class Container:
         print(
             "run block post url",
             base_url.format(self.pod.status.pod_ip, default_pod_port, "run_block"),
-            "data",
-            data,
         )
         r = requests.post(
             base_url.format(self.pod.status.pod_ip, default_pod_port, "run_block"), json=data
@@ -248,7 +242,7 @@ class Container:
         kube_config.load_kube_config(k3s_kube_config_path)
         api_instance = client.CoreV1Api()
         api_instance.delete_namespaced_pod(
-            name=self.container.metadata.name,
+            name=self.pod.metadata.name,
             namespace="default",
             body=client.V1DeleteOptions(),
         )

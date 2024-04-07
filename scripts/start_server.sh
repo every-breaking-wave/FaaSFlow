@@ -11,7 +11,7 @@ start() {
 
     python3 gateway.py localhost 7000  &
 
-    python3 test_server.py localhost &
+    sudo python3 test_server.py localhost &
 
     # python3 gateway.py localhost 7000 > ../../logs/gateway.log 2>&1 &
 

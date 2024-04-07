@@ -59,7 +59,7 @@ class Template:
             self.requestID_block_container[request_id] = {}
         self.requestID_block_container[request_id][block_name] = container
 
-    def create_container(self, block_name):
+    def create_container(self, request: RequestInfo):
         # self.lock.acquire()
         if self.num_exec > self.template_info.max_containers:
             # self.lock.release()
@@ -69,6 +69,7 @@ class Template:
         # st = time.time()
         try:
             container = Container.create(self.template_info.image_name,
+                                         request.workflow_name,
                                          self.template_info.blocks.keys(),
                                          self.port_manager.allocate(),
                                          'exec',
@@ -79,9 +80,6 @@ class Template:
             print(e)
             self.num_exec -= 1
             return None
-        # ed = time.time()
-        # print('container cold start', ed - st)
-        # self.lock.acquire()
         container.idle_blocks_cnt -= 1
         if container.idle_blocks_cnt > 0:
             self.idle_containers.append(container)
@@ -200,7 +198,7 @@ class Template:
 
         if container is None:
             print(request.block_name, request.template_name, request.request_id, 'is creating new container')
-            container = self.create_container(request.block_name)
+            container = self.create_container(request)
         else:
             pass
             # print(request.block_name, request.template_name, request.request_id, 'is using idle block')

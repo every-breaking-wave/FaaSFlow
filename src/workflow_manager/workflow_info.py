@@ -2,7 +2,7 @@ import os.path
 from typing import Dict
 
 import yaml
-
+import time
 
 # this information is different per workflow
 class WorkflowInfo:
@@ -10,6 +10,8 @@ class WorkflowInfo:
         self.workflow_name = workflow_name
         self.templates_infos = templates_infos
         self.data = raw_data
+        self.cnt = 0
+        self.timestamp = time.time()
 
     @classmethod
     def parse(cls, config_dict):

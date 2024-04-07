@@ -2,9 +2,12 @@ import gevent
 
 from config import config
 import couchdb
-
+import time
 couchdb_url = config.COUCHDB_URL
+import sys
 
+sys.path.append('../../')
+from src.logger.logger import logger
 
 class Repository:
     def __init__(self):
@@ -59,3 +62,44 @@ class Repository:
         tmp_db = self.couchdb['workflow_latency']
         for log in self.waiting_logs:
             tmp_db.save(log)
+
+    def get_latencies_by_phase_and_workflow_name(self, phase, workflow_name):
+        requests_logs = {}
+        for k in self.couchdb['workflow_latency']:
+            doc = self.couchdb['workflow_latency'][k]
+            # template_name的格式是workflow_name__xxx，需要特殊处理一下
+            if doc['phase'] == phase and doc['template_name'].startswith(workflow_name):
+                # 还需要筛选st在一分钟以内的数据
+                if time.time() - doc['st'] > 60:
+                    continue
+                request_id = doc['request_id']
+                if request_id not in requests_logs:
+                    requests_logs[request_id] = []
+                requests_logs[request_id].append(doc)
+        logger.info("get logs size {}".format(len(requests_logs)))
+        return requests_logs
+    
+    def save_workflow_default_runtime(self, workflow_name, runtime):
+        # 保存workflow的默认runtime
+        # 先读出原有json
+        try:
+            workflow_info = self.couchdb['workflow_info'][workflow_name]
+            workflow_info['default_runtime'] = runtime
+            self.couchdb['workflow_info'][workflow_name] = workflow_info
+        except Exception:
+            self.couchdb['workflow_info'][workflow_name] = {'default_runtime': runtime}
+        
+
+    def save_workflow_code(self, workflow_name, code):
+        try:
+            workflow_info = self.couchdb['workflow_info'][workflow_name]
+            workflow_info['code'] = code
+            self.couchdb['workflow_info'][workflow_name] = workflow_info
+        except Exception:
+            self.couchdb['workflow_info'][workflow_name] = {'code': code}
+        
+    def get_workflow_code(self, workflow_name):
+        try:
+            return self.couchdb['workflow_info'][workflow_name]['code']
+        except Exception:
+            return None
