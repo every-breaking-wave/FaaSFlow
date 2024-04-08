@@ -88,6 +88,12 @@ class Repository:
             self.couchdb['workflow_info'][workflow_name] = workflow_info
         except Exception:
             self.couchdb['workflow_info'][workflow_name] = {'default_runtime': runtime}
+            
+    def get_workflow_default_runtime(self, workflow_name):
+        try:
+            return self.couchdb['workflow_info'][workflow_name]['default_runtime']
+        except Exception:
+            return None
         
 
     def save_workflow_code(self, workflow_name, code):

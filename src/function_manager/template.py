@@ -67,6 +67,8 @@ class Template:
         self.num_exec += 1
         # self.lock.release()
         # st = time.time()
+        
+        runtime_class = repo.get_workflow_default_runtime(request.workflow_name)
         try:
             container = Container.create(self.template_info.image_name,
                                          request.workflow_name,
@@ -75,7 +77,8 @@ class Template:
                                          'exec',
                                          self.cpus,
                                          self.parallel_limit,
-                                         self.KAFKA_CHUNK_SIZE)
+                                         self.KAFKA_CHUNK_SIZE,
+                                         runtime_class)
         except Exception as e:
             print(e)
             self.num_exec -= 1

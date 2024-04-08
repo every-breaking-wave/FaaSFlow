@@ -72,7 +72,8 @@ class Pod:
                         "path": host_path,
                         "type": "Directory"
                     }
-                }]
+                }],
+                "runtimeClassName": "runc"
             }
         }
         
@@ -112,4 +113,4 @@ class Pod:
                 pass
             gevent.sleep(0.005)
 
-Pod.create('image-processing', 'test11', 5000, 'attr', 0.2, 'parallel_limit', 'KAFKA_CHUNK_SIZE')
+Pod.create('image-processing', 'xxtest11', 5000, 'attr', 0.2, 'parallel_limit', 'KAFKA_CHUNK_SIZE')

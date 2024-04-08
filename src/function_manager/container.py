@@ -16,7 +16,7 @@ import string
 
 base_url = "http://{}:{}/{}"
 work_dir = "/proxy/mnt"
-namespace = "default"
+function_namespace = "function"
 k3s_kube_config_path = "/etc/rancher/k3s/k3s.yaml"
 default_pod_port = 5000
 
@@ -37,7 +37,7 @@ class Container:
 
     @classmethod
     def create(
-        cls, image_name, workflow_name, blocks_name, port, attr, cpus, parallel_limit, KAFKA_CHUNK_SIZE
+        cls, image_name, workflow_name, blocks_name, port, attr, cpus, parallel_limit, KAFKA_CHUNK_SIZE, runtime_class
     ) -> "Container":
         # 加载k3s kubeconfig
         # 生成一个随机的字符串作为Pod的名称
@@ -47,6 +47,7 @@ class Container:
             + "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
         )
         kube_config.load_kube_config(k3s_kube_config_path)
+        # TODO: host_path may need to be changed
         host_path = "./"
         pod = client.V1Pod(
             api_version="v1",
@@ -84,7 +85,7 @@ class Container:
                         ),
                     )
                 ],
-                runtime_class_name="kata",
+                runtime_class_name=runtime_class,
             ),
         )
 
@@ -93,7 +94,7 @@ class Container:
         # 捕捉异常
         try:
             api_response = api_instance.create_namespaced_pod(
-                body=pod, namespace=namespace
+                body=pod, namespace=function_namespace
             )
         except Exception as e:
             print("Exception when calling CoreV1Api->create_namespaced_pod: %s\n" % e)
@@ -101,7 +102,7 @@ class Container:
 
         # 等待Pod启动...
         while True:
-            pod = api_instance.read_namespaced_pod(name=pod_name, namespace=namespace)
+            pod = api_instance.read_namespaced_pod(name=pod_name, namespace=function_namespace)
             if pod.status.phase == "Running":
                 print(f"Pod {pod_name} is running.")
                 break
