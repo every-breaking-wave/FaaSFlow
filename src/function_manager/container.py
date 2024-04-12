@@ -7,6 +7,7 @@ from docker import DockerClient
 from gevent.lock import BoundedSemaphore
 from docker.types import Mount
 from src.function_manager.file_controller import file_controller
+from src.workflow_manager.repository import Repository
 from config import config
 from src.workflow_manager.flow_monitor import flow_monitor
 from kubernetes import client
@@ -19,6 +20,9 @@ work_dir = "/proxy/mnt"
 function_namespace = "function"
 k3s_kube_config_path = "/etc/rancher/k3s/k3s.yaml"
 default_pod_port = 5000
+
+
+repo = Repository()
 
 class Container:
     def __init__(
@@ -92,6 +96,7 @@ class Container:
         # 创建Pod
         api_instance = client.CoreV1Api()
         # 捕捉异常
+        start_time = time.time()
         try:
             api_response = api_instance.create_namespaced_pod(
                 body=pod, namespace=function_namespace
@@ -104,6 +109,9 @@ class Container:
         while True:
             pod = api_instance.read_namespaced_pod(name=pod_name, namespace=function_namespace)
             if pod.status.phase == "Running":
+                end_time = time.time()
+                # 记录pod的启动时间
+                repo.save_start_latency(end_time - start_time, workflow_name)
                 print(f"Pod {pod_name} is running.")
                 break
             else:
@@ -244,7 +252,7 @@ class Container:
         api_instance = client.CoreV1Api()
         api_instance.delete_namespaced_pod(
             name=self.pod.metadata.name,
-            namespace="default",
+            namespace=function_namespace,
             body=client.V1DeleteOptions(),
         )
         print("Pod deleted.")

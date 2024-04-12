@@ -95,7 +95,6 @@ class Repository:
         except Exception:
             return None
         
-
     def save_workflow_code(self, workflow_name, code):
         try:
             workflow_info = self.couchdb['workflow_info'][workflow_name]
@@ -109,3 +108,22 @@ class Repository:
             return self.couchdb['workflow_info'][workflow_name]['code']
         except Exception:
             return None
+        
+    def save_start_latency(self, latency, workflowname):
+        # 每次为一个workflow启动一个pod的时候，我们记录下来这个启动的latency在workflow_info中，保存在一个list中
+        # 为了方便查询，我们只保留最近的100个
+        try:
+            start_latencies = self.couchdb['workflow_info'][workflowname]['start_latencies']
+        except Exception:
+            start_latencies = []
+        start_latencies.append(latency)
+        if len(start_latencies) > 100:
+            start_latencies = start_latencies[-100:]
+        self.couchdb['workflow_info'][workflowname]['start_latencies'] = start_latencies
+        
+    def get_start_latencies(self, workflow_name):
+        start_latencies = self.couchdb['workflow_info'][workflow_name].get('start_latencies', [])
+        if start_latencies == []:
+            return 0
+        average_latency = sum(start_latencies) / len(start_latencies)
+        return average_latency

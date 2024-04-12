@@ -15,6 +15,7 @@ from src.function_manager.function_manager import FunctionManager
 from config import config
 import pykafka
 from src.workflow_manager.repository import Repository
+from src.logger.logger import logger
 
 repo = Repository()
 
@@ -107,21 +108,6 @@ class WorkerSPManager:
             self.incoming_data_queue.append(
                 DataInfo(request_id, workflow_name, template_name, block_name, data_name, data_infos, from_local,
                          from_virtual))
-        # self.workflows_state[request_id].datas[k] = v
-        # self.workflows_state[request_id].datas_type[k] = datatype
-        # if '$USER' in k and from_local and datatype == 'entity': # assert user_data which is sent to user is small
-        #     gevent.spawn(self.post_user_data, request_id, k, v)
-        # local_functions = set()
-        # already_transfered_ips = set()
-        # for function_name in datas_successors[k]:
-        #     target_ip = functions_infos[function_name]['ip']
-        #     if target_ip == self.host_addr or target_ip == '127.0.0.1':
-        #         local_functions.add(function_name)
-        #     elif from_local and target_ip not in already_transfered_ips:
-        #         already_transfered_ips.add(target_ip)
-        #         gevent.spawn(self.send_data_remote, target_ip, request_id, workflow_name, {k: v}, datatype)
-        # if len(local_functions) > 0:
-        #     self.incoming_data_queue.append(DataInfo(request_id, workflow_name, k, v, datatype, local_functions))
 
     def post_user_data(self, request_id, k, v):
         remote_url = 'http://{}/post_user_data'.format(self.gateway_addr)
@@ -146,12 +132,6 @@ class WorkerSPManager:
         output_type = data_infos['output_type']
         workflow_state = self.workflows_state[request_id]
         if output_type == 'FOREACH':
-            # workflow_state.lock.acquire()
-            # if dest_data_name not in workflow_state.templates_blocks_inputDatas[dest_template_name][dest_block_name]:
-            #     workflow_state.templates_blocks_inputDatas[dest_template_name][dest_block_name][dest_data_name] = []
-            # workflow_state.lock.release()
-            # workflow_state.templates_blocks_inputDatas[dest_template_name][dest_block_name][dest_data_name].append(
-            #     data_infos)
 
             # Todo. Currently assume foreach Vars can directly trigger, i.e. No other on-trip Vars.
             input_datas = {dest_data_name: data_infos}
@@ -214,63 +194,7 @@ class WorkerSPManager:
         requests.post(config.PREFETCHER_URL.format('prefetch_data'), json=datainfo.data_infos)
         db_key = datainfo.data_infos['db_key']
         self.workflows_state[datainfo.request_id].prefetch_keys_status[db_key].set(1)
-        # ed = time.time()
-        # print('trying saving latency for kafka fetch', datainfo.request_id)
-        # repo.save_latency({'request_id': datainfo.request_id, 'template_name': datainfo.template_name,
-        #                    'block_name': datainfo.block_name + '_prefetch_Real_time_',
-        #                    'phase': 'use_container', 'time': ed - st, 'st': st, 'ed': ed})
         return
-        db_key = datainfo.data_infos['db_key']
-        partition_idx = datainfo.data_infos['partition_idx']
-        chunk_num = datainfo.data_infos['chunk_num']
-        topic = datainfo.data_infos['topic']
-        start_offset = datainfo.data_infos['start_offset']
-        request_id = datainfo.request_id
-        # doc = self.db[request_id]
-        while True:
-            try:
-                kafka_topic: pykafka.topic.Topic = self.kafka_client.topics[topic]
-                break
-            except Exception as e:
-                print(e)
-                gevent.sleep(0.1)
-        kafka_consumer = kafka_topic.get_simple_consumer(partitions=[kafka_topic.partitions[partition_idx]])
-        # print('----', kafka_topic.partitions, kafka_topic.earliest_available_offsets(),
-        #       kafka_topic.latest_available_offsets(), kafka_consumer.held_offsets)
-        while True:
-            try:
-                tmp = kafka_topic.latest_available_offsets()[partition_idx].offset[0]
-                break
-            except Exception as e:
-                print(e)
-                gevent.sleep(0.1)
-
-        while tmp < start_offset:
-            print(tmp, start_offset)
-            gevent.sleep(0.1)
-            tmp = kafka_topic.latest_available_offsets()[partition_idx].offset[0]
-        if start_offset > 0:
-            kafka_consumer.reset_offsets([(kafka_topic.partitions[partition_idx], start_offset - 1)])
-        st = time.time()
-        size = 0
-        with open(os.path.join(prefetch_dir, db_key), 'wb') as f:
-            for i in range(chunk_num):
-                chunk_data = kafka_consumer.consume().value
-                # if i == 0:
-                #     st = time.time()
-                # tmp = json.loads(chunk_data)
-                # print(db_key, tmp['db_key'], tmp['idx'], i, chunk_num)
-                # chunk_data = tmp['val'].encode()
-                size += len(chunk_data)
-                f.write(chunk_data)
-        ed = time.time()
-
-        print('prefetch time:', ed - st, 'file size:', size)
-        self.workflows_state[datainfo.request_id].prefetch_keys_status[db_key].set(1)
-        repo.save_latency(
-            {'request_id': datainfo.request_id, 'template_name': datainfo.template_name,
-             'block_name': datainfo.block_name + '_prefetch_Real_time',
-             'phase': 'use_container', 'time': ed - st, 'st': st, 'ed': ed})
 
     def prefetch_couch_data(self, datainfo: DataInfo):
         request_id = datainfo.request_id
@@ -295,10 +219,7 @@ class WorkerSPManager:
         else:
             raise Exception
         ed = time.time()
-        # repo.save_latency(
-        #     {'request_id': datainfo.request_id, 'template_name': datainfo.template_name,
-        #      'block_name': datainfo.block_name + '_prefetch_Total_time',
-        #      'phase': 'use_container', 'time': ed - st, 'st': st, 'ed': ed})
+
 
     def get_dest(self, data: DataInfo) -> dict:
         block_info = self.workflows_info[data.workflow_name].templates_infos[data.template_name]['blocks'][
@@ -372,6 +293,7 @@ class WorkerSPManager:
     def dispatch_incoming_data(self):
         gevent.spawn_later(dispatch_interval, self.dispatch_incoming_data)
         if len(self.incoming_data_queue) > 0:
+            logger.info('len: {}'.format(len(self.incoming_data_queue)))
             data = self.incoming_data_queue.pop(0)
         else:
             return
@@ -450,10 +372,12 @@ class WorkerSPManager:
                                      data.block_name, {data_name: data_infos}, data.from_virtual)
 
     def clean_request(self, request_id):
+        logger.info('clean_request: {}'.format(request_id))
         self.workflows_state.pop(request_id)
         self.flow_monitor.requests_keys_info.pop(request_id)
 
     def get_state(self, request_id: str):
+        logger.info('get_state: {}'.format(request_id))
         if request_id not in self.workflows_state:
             raise Exception('Error: trying to get a nonexistent state!')
         return self.workflows_state[request_id]
@@ -461,7 +385,7 @@ class WorkerSPManager:
     def trigger_block_local(self, request_id, workflow_name, template_name, block_name):
         # Always trigger locally
         # print('trigger_block_local', request_id, workflow_name, template_name, block_name)
-
+        logger.info('trigger_block_local: {}, {}, {}, {}'.format(request_id, workflow_name, template_name, block_name))
         # check whether we need to use affinity.
         input_datas = self.workflows_state[request_id].templates_blocks_inputDatas[template_name][block_name]
         if template_name + '.' + block_name in self.workflows_state[request_id].templates_blocks_triggered:
@@ -487,6 +411,7 @@ class WorkerSPManager:
     #     pass
 
     def trigger_switch(self, request_id, workflow_name, template_name, block_name):
+        logger.info('trigger_switch: {}, {}, {}, {}'.format(request_id, workflow_name, template_name, block_name))
         input_datas = self.workflows_state[request_id].templates_blocks_inputDatas[template_name][block_name]
         ctx = {}
         for data_name, data_infos in input_datas.items():
@@ -504,6 +429,7 @@ class WorkerSPManager:
         raise Exception('virtual switch branch not match')
 
     def check_input_db_data(self, request_id, datainfo):
+        logger.info('check_input_db_data: {}, {}'.format(request_id, datainfo))
         workflow_state = self.workflows_state[request_id]
         if datainfo['datatype'] in ['couch_data_ready', 'kafka_data_ready']:
             db_key = datainfo['db_key']
@@ -511,6 +437,7 @@ class WorkerSPManager:
             datainfo['datatype'] = 'disk_data_ready'
 
     def check_input_datas(self, request_id, workflow_name, template_name, block_name, input_datas):
+        logger.info('check_input_datas: {}, {}, {}, {}, {}'.format(request_id, workflow_name, template_name, block_name, input_datas))
         input_datas_infos = self.workflows_info[workflow_name].templates_infos[template_name]['blocks'][block_name][
             'input_datas']
         workflow_state = self.workflows_state[request_id]
@@ -525,6 +452,7 @@ class WorkerSPManager:
                 raise Exception
 
     def trigger_normal(self, request_id, workflow_name, template_name, block_name, input_datas=None):
+        logger.info('trigger_normal: {}, {}, {}, {}, {}'.format(request_id, workflow_name, template_name, block_name, input_datas))
         if input_datas is None:
             input_datas = self.workflows_state[request_id].templates_blocks_inputDatas[template_name][block_name]
         self.check_input_datas(request_id, workflow_name, template_name, block_name, input_datas)
@@ -535,6 +463,7 @@ class WorkerSPManager:
                                                  'blocks'][block_name])
 
     def send_data_remote(self, remote_addr, request_id, workflow_name, template_name, block_name, datas, from_virtual):
+        logger.info('send_data_remote: {}, {}, {}, {}, {}, {}'.format(remote_addr, request_id, workflow_name, template_name, block_name, datas))
         remote_url = 'http://{}:8000/transfer_data'.format(remote_addr)
         data = {'request_id': request_id,
                 'workflow_name': workflow_name,

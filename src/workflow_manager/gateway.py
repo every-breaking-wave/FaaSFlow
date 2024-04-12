@@ -21,10 +21,12 @@ from gevent.pywsgi import WSGIServer
 from workflow_info import WorkflowInfo
 from kafka import KafkaAdminClient
 from src.logger.logger import logger
+from src.workflow_manager.metrics_server import MetricsServer
 
 app = Flask(__name__)
 repo = Repository()
 workflows_info = WorkflowInfo.parse(config.WORKFLOWS_INFO_PATH)
+metrics_server = MetricsServer()
 worker_addrs = config.WORKER_ADDRS
 
 lock = threading.Lock()
@@ -39,15 +41,16 @@ class RequestInfo:
 
 requests_info: Dict[str, RequestInfo] = {}
 workersp_url = 'http://{}:8000/{}'
+function_namespace = "function"
 
 
 def analyze_workflow(workflow_name: str):
     logger.info("analyze workflow {}".format(workflow_name))
     workflow_info = workflows_info[workflow_name]
     # 从couchdb中获取workflow的最近的results和workflow_latency信息
-    request_logs = repo.get_latencies_by_phase_and_workflow_name('use_container', workflow_name)
-    
-    
+    latency_results = repo.get_latencies_by_phase_and_workflow_name('use_container', workflow_name)
+    cpu_data, memory_data = metrics_server.get_memory_metrics_by_name(workflow_name, function_namespace)
+
     
 @app.route('/run', methods=['POST'])
 def run():
@@ -65,7 +68,7 @@ def run():
         workflow_info.cnt += 1
     workflow_info.timestamp = time.time()
     if workflow_info.cnt > THRESHOLD:
-        threading.Thread(target=analyze_workflow, args=(workflow_name, )).start()
+        threading.Thread(target=metrics_server.analyze_workflow, args=(workflow_name, )).start()
     worker_num = len(worker_addrs)
     templates_info = {}
     print("workflow_info.templates_infos", workflow_info.templates_infos)
@@ -170,6 +173,23 @@ def clear():
     requests_info.clear()
     return 'OK', 200
 
+@app.route('/prepare_container', methods=['POST'])
+def prepare_container():
+    inp = request.get_json(force=True, silent=True)
+    workflow_name = inp['workflow_name']
+    replicas = inp['replicas']
+    print("prepare container", workflow_name, replicas)
+    events = []
+    data = {'workflow_name': workflow_name, 'replicas': replicas}
+    for ip in worker_addrs:
+        remote_url = workersp_url.format(ip, 'prepare_idle_container')
+        # headers = {'Connection': 'close'}
+        print("post to", remote_url)
+        print("data is", data)
+        events.append(gevent.spawn(requests.post, remote_url, json=data))
+        print("add event", remote_url)
+    gevent.joinall(events)
+    return 'OK', 200
 
 if __name__ == '__main__':
     # print("connect to kafka at {}".format(config.KAFKA_URL))

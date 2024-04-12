@@ -123,6 +123,14 @@ def finish():
     return 'OK', 200
 
 
+@app.route('/prepare_idle_container', methods=['POST'])
+def prepare_idle_container():
+    print("data received = ", request.get_json(force=True, silent=True))
+    data = request.get_json(force=True, silent=True)
+    dispatcher.manager.function_manager.prepare_idle_container(data['workflow_name'], data['replicas'])
+    return 'OK', 200
+
+
 if __name__ == '__main__':
     gc.disable()
     gevent.spawn_later(gc_interval, regular_clear_gc)

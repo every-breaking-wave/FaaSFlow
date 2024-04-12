@@ -9,6 +9,7 @@ from src.function_manager.template_info import TemplateInfo
 from gevent.lock import BoundedSemaphore
 from src.function_manager.port_manager import PortManager
 from src.workflow_manager.repository import Repository
+import threading
 
 repo = Repository()
 
@@ -251,3 +252,15 @@ class Template:
     def remove_container(self, container: Container):
         container.destroy()
         self.port_manager.put(container.port)
+        
+    def prepare_idle_container(self, workflow_name, replicas=1):
+        request = RequestInfo('idle', workflow_name, 'idle', {}, 'idle', {}, {})
+        # 通过多线程并发地创建replicas个container
+        threads = []
+        for _ in range(replicas):
+            t = threading.Thread(target=self.create_container, args=(request,))
+            threads.append(t)
+            t.start()
+        for t in threads:
+            t.join()
+        print('prepare_idle_container success!')

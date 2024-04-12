@@ -13,12 +13,16 @@ start() {
 
     sudo python3 test_server.py localhost &
 
+    cd ../../
+
+    python src/utils/code_utils.py image-processing benchmark/template_functions/image-processing/blocks/block_0/main.py 
+
     # python3 gateway.py localhost 7000 > ../../logs/gateway.log 2>&1 &
 
     # python3 test_server.py localhost  > ../../logs/test_server.log 2>&1 &
 
     # 启动测试
-    cd ../../test
+    cd test
     python3 async_test.py > ../logs/test.log 2>&1 &
 }
 
