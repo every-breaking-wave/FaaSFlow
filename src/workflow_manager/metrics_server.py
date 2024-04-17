@@ -24,8 +24,8 @@ class  MetricsServer:
         
         
     def init(self):
-        gevent.spawn_later(dispatch_interval, self.get_pod_metrics)
-    
+        pass
+
     def run(self):
         pass
     
@@ -37,38 +37,37 @@ class  MetricsServer:
             step=step
         )
     
-    def get_cpu_usage_total_by_name(self, pod_name, namespace):
+    
+    def get_cpu_usage_total_by_name(self, workflow_name, namespace):
         # 统计某个workflow在过去1h的cpu使用量
-        cpu_query = f'sum(container_cpu_usage_seconds_total{{namespace="{namespace}",pod=~"{pod_name}.*", container!=""}}) by (container)'
+        cpu_query = f'sum(container_cpu_usage_seconds_total{{namespace="{namespace}",pod=~"{workflow_name}.*", container!=""}}) by (container)'
         cpu_usage_total_list = self.custom_query_range(cpu_query, parse_datetime("1h"), parse_datetime("now"), '1h')
-        print('cpu_usage_total_list:', cpu_usage_total_list)
         cpu_usage_total_list = [x['values'] for x in cpu_usage_total_list][0]
         cpu_usage_total_list = [float(x[1]) for x in cpu_usage_total_list]
         cpu_usage_total = sum(cpu_usage_total_list) / len(cpu_usage_total_list)
-        print('cpu_usage_total:', cpu_usage_total)
+        print(f'{workflow_name} cpu_usage_total in last hour', cpu_usage_total)
         return cpu_usage_total
     
-    def get_cpu_usage_rate_by_name(self, pod_name, namespace):
-        print("pod name is", pod_name)
-        cpu_query = f'sum(rate(container_cpu_usage_seconds_total{{namespace="{namespace}",pod=~"{pod_name}.*", container!=""}}[1m])) by (container)'
+    
+    def get_cpu_usage_rate_by_name(self, workflow_name, namespace):
+        cpu_query = f'sum(rate(container_cpu_usage_seconds_total{{namespace="{namespace}",pod=~"{workflow_name}.*", container!=""}}[1m])) by (container)'
         cpu_usage_rate_list = self.custom_query_range(cpu_query, parse_datetime("3m"), parse_datetime("now"), '60s')
         # 获取这个dict中的key为'value'的值
-        cpu_usage_rate_list = [x['values'] for x in cpu_usage_rate_list][0]
+        cpu_usage_rate_list = [x['values'] for x in cpu_usage_rate_list][-1]
         cpu_usage_rate_list = [float(x[1]) for x in cpu_usage_rate_list]
         cpu_usage_rate = sum(cpu_usage_rate_list) / len(cpu_usage_rate_list)
-        print('cpu_usage_rate:', cpu_usage_rate)
+        print(f'{workflow_name} cpu_usage_rate last 60s ', cpu_usage_rate)
         return cpu_usage_rate
 
 
-    def get_memory_metrics_by_name(self, pod_name, namespace):
-        memory_query = f'sum(rate(container_memory_usage_bytes{{namespace="{namespace}",pod=~"{pod_name}.*", container!=""}}[1m])) by (container)'
-        
+    def get_memory_metrics_by_name(self, workflow_name, namespace):
+        memory_query = f'sum(rate(container_memory_usage_bytes{{namespace="{namespace}",pod=~"{workflow_name}.*", container!=""}}[1m])) by (container)'
         memory_usage_list = self.custom_query_range(memory_query, parse_datetime("3m"), parse_datetime("now"), '60s')
         print('memory_usage_list:', memory_usage_list)
-        memory_usage_list = [x['values'] for x in memory_usage_list][0]
+        memory_usage_list = [x['values'] for x in memory_usage_list][-1]
         memory_usage_list = [float(x[1]) for x in memory_usage_list]
         memory_usage = sum(memory_usage_list) / len(memory_usage_list)
-        print('memory_usage:', memory_usage)
+        print(f'{workflow_name} memory_usage rate in last 60s', memory_usage)
         return memory_usage
     
     
@@ -107,6 +106,11 @@ class  MetricsServer:
     def analyze_workflow(self, workflow_name):
         # 从以下几个方面来分析workflow： cpu， memory， start_latency
         print("analyze workflow {}".format(workflow_name))
+        # 先判断workflow是否存在
+        if not repo.is_workflow_exist(workflow_name):
+            print(f"workflow {workflow_name} does not exist")
+            return
+        
         cpu_usage_rate = self.get_cpu_usage_rate_by_name(workflow_name, function_namespace)
         cpu_usage_total = self.get_cpu_usage_total_by_name(workflow_name, function_namespace)
         cpu_score = self.calculate_cpu_score(cpu_usage_rate, cpu_usage_total)
@@ -124,6 +128,6 @@ class  MetricsServer:
         print("start latency diff is", start_latency_diff)
         
 
-if __name__ == '__main__':
-    metrics_server = MetricsServer()
-    metrics_server.analyze_workflow("image-processing")
+# if __name__ == '__main__':
+#     metrics_server = MetricsServer()
+#     metrics_server.analyze_workflow("image-processing")

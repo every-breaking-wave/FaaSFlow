@@ -31,7 +31,7 @@ ids = {}
 
 def post_request(request_id, idx):
     request_info = {'request_id': request_id,
-                    'workflow_name': 'recognizer',
+                    'workflow_name': 'linpack',
                     'input_datas': {'$USER.start': {'datatype': 'entity', 'val': None, 'output_type': 'NORMAL'}}}
     print('--firing--', request_id)
     st = time.time()

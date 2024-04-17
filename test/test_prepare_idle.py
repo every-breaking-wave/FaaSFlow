@@ -15,7 +15,7 @@ import threading
 
 gateway_url = 'http://' + config.GATEWAY_URL + '/{}'
 
-workflow_name = 'image-processing'
+workflow_name = 'linpack'
 replicas = 20
 
 
@@ -27,7 +27,7 @@ def clean_worker(addr):
 def post_request(request_id, workflow_name, replicas):
     request_info = {'request_id': request_id,
                     'workflow_name': workflow_name,
-                    'replicas': 20,
+                    'replicas': replicas,
                 }
 
     # print('--firing--', request_id)

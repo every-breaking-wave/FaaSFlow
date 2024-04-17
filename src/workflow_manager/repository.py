@@ -127,3 +127,6 @@ class Repository:
             return 0
         average_latency = sum(start_latencies) / len(start_latencies)
         return average_latency
+
+    def is_workflow_exist(self, workflow_name):
+        return workflow_name in self.couchdb['workflow_info']

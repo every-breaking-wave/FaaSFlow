@@ -4,7 +4,8 @@
 runtime_to_start_latency = {
     "runc": 0.5,
     "kata-qemu": 0.8,
-    "kata-fc": 0.7,
+    "kata-dragonball": 0.7,
+    "kata-fc": 0.6,
 }
 
 

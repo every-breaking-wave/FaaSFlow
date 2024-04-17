@@ -11,19 +11,31 @@ start() {
 
     python3 gateway.py localhost 7000  &
 
+    sleep 5
+
     sudo python3 test_server.py localhost &
 
     cd ../../
-
-    python src/utils/code_utils.py image-processing benchmark/template_functions/image-processing/blocks/block_0/main.py 
 
     # python3 gateway.py localhost 7000 > ../../logs/gateway.log 2>&1 &
 
     # python3 test_server.py localhost  > ../../logs/test_server.log 2>&1 &
 
+    # 这部分代码必需置于test_prepare_idle之前
+    sleep 5
+    workflow_name=linpack
+    python src/utils/code_utils.py $workflow_name benchmark/template_functions/$workflow_name/blocks/block_0/main.py 
+
+
     # 启动测试
     cd test
-    python3 async_test.py > ../logs/test.log 2>&1 &
+    
+    python3 test_prepare_idle.py
+
+
+
+    # 去除了下面代码中的clear，因为test_prepare_idle.py中已经清除了
+    # python3 async_test.py > ../logs/test.log 2>&1 &
 }
 
 main () {

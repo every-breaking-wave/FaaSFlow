@@ -51,6 +51,7 @@ class Template:
         self.idle_blocks: Dict[str, List[Container]] = {block_name: [] for block_name in
                                                         self.template_info.blocks.keys()}
         self.idle_containers: List[Container] = []
+        self.in_use_container_num = 0
         # Todo: this need GC.
         self.requestID_block_container = {}
         self.requestIDs_container: Dict[str, Container] = {}
@@ -60,7 +61,8 @@ class Template:
             self.requestID_block_container[request_id] = {}
         self.requestID_block_container[request_id][block_name] = container
 
-    def create_container(self, request: RequestInfo):
+    # use 意味着调用者会立刻使用这个container，不会将其加入到idle_containers中（除非并行度>1）
+    def create_container(self, request: RequestInfo, use: bool = True):
         # self.lock.acquire()
         if self.num_exec > self.template_info.max_containers:
             # self.lock.release()
@@ -84,9 +86,11 @@ class Template:
             print(e)
             self.num_exec -= 1
             return None
-        container.idle_blocks_cnt -= 1
+        assert container.idle_blocks_cnt > 0
+        if use is True:
+            container.idle_blocks_cnt -= 1
         if container.idle_blocks_cnt > 0:
-            self.idle_containers.append(container)
+            self.put_idle_container(container)
         # self.lock.release()
         # container.running_blocks.add(block_name)
         # self.init_container(container)
@@ -96,6 +100,7 @@ class Template:
         assert block_name is not None
         res = None
         # self.lock.acquire()
+        print('get_idle_container size = ', len(self.idle_containers))
         if len(self.idle_containers) > 0:
             res = self.idle_containers[-1]
             res.idle_blocks_cnt -= 1
@@ -108,17 +113,19 @@ class Template:
     def put_idle_container(self, container):
         # self.lock.acquire()
         self.idle_containers.append(container)
+        print("idle container size = ", len(self.idle_containers))
         # self.num_exec -= 1
         # self.lock.release()
 
     def run_block(self, container: Container, request: RequestInfo):
         # self.upd(request.request_id, request.block_name, container)
         st = time.time()
-        print("run block", request.block_name, request.template_name, request.request_id, 'is using idle block')
+        self.in_use_container_num += 1
         delay_time = container.run_block(request.request_id, request.workflow_name, request.template_name,
                                          request.templates_infos, request.block_name, request.block_inputs,
                                          request.block_infos)
         ed = time.time()
+        self.in_use_container_num -= 1
         # print(request.request_id, request.template_name, delay_time)
         if self.template_info.gc == 'True' or self.template_info.gc == True:
             container.run_gc()
@@ -126,7 +133,8 @@ class Template:
             # 加入到idle_containers
             self.put_container(container)
         else:
-            gevent.spawn_later(delay_time, self.put_container, container)
+            # TODO: 这里具体等待多久是一个值得测试的问题
+            gevent.spawn_later(1, self.put_container, container)
         repo.save_latency(
             {'request_id': request.request_id, 'template_name': request.template_name, 'block_name': request.block_name,
              'phase': 'use_container', 'time': ed - st, 'st': st, 'ed': ed, 'cpu': self.cpus})
@@ -193,6 +201,14 @@ class Template:
         #     return
         if len(self.request_queue) == 0:
             return
+
+        # 目前系统负载很大，不再分配新的block
+        if self.in_use_container_num >= 50:
+            print('in_use_container_num = ', self.in_use_container_num, 'dispatch request later')
+            # 睡眠一段时间
+            gevent.sleep(10)
+            return
+
         request = self.request_queue.pop(0)
         # print('Allocating a block...')
         
@@ -202,7 +218,7 @@ class Template:
 
         if container is None:
             print(request.block_name, request.template_name, request.request_id, 'is creating new container')
-            container = self.create_container(request)
+            container = self.create_container(request, use=True)
         else:
             pass
             # print(request.block_name, request.template_name, request.request_id, 'is using idle block')
@@ -258,7 +274,7 @@ class Template:
         # 通过多线程并发地创建replicas个container
         threads = []
         for _ in range(replicas):
-            t = threading.Thread(target=self.create_container, args=(request,))
+            t = threading.Thread(target=self.create_container, args=(request, False, ))
             threads.append(t)
             t.start()
         for t in threads:

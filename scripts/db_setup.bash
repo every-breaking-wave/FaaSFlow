@@ -15,10 +15,17 @@
 # pip3 install -r requirements.txt
 # install and initialize couchdb
 # docker pull couchdb
+docker rm -f couchdb
 docker run -itd -p 5984:5984 -e COUCHDB_USER=openwhisk -e COUCHDB_PASSWORD=openwhisk --name couchdb couchdb
 
-python3 couchdb_starter.py
 # install redis
 # docker pull redis
 docker-compose -f kafka/docker-compose.yml up -d
+
+
+docker rm -f redis
+docker run -itd -p 6379:6379 --name redis redis
+
+sleep 8
+python couchdb_starter.py
 #docker run -itd -p 6379:6379 --name redis redis

@@ -1,5 +1,5 @@
 image_name="linpack"
-workflow_name = "linpack"
+workflow_name="linpack"
 
 docker build -t $image_name ~/FaaSFlow/benchmark/template_functions/$image_name
  # 获取当前image的id
