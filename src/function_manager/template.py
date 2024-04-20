@@ -16,7 +16,7 @@ repo = Repository()
 
 class RequestInfo:
     def __init__(self, request_id, workflow_name, template_name, templates_infos, block_name, block_inputs,
-                 block_infos):
+                 block_infos, runtime_name=""):
         self.request_id = request_id
         self.workflow_name = workflow_name
         self.template_name = template_name
@@ -26,6 +26,7 @@ class RequestInfo:
         self.block_infos = block_infos
         # self.result = event.AsyncResult()
         self.arrival_time = time.time()
+        self.runtime_name = runtime_name
 
 
 idle_lifetime = 600
@@ -70,8 +71,11 @@ class Template:
         self.num_exec += 1
         # self.lock.release()
         # st = time.time()
-        
-        runtime_class = repo.get_workflow_default_runtime(request.workflow_name)
+        runtime_class = ""
+        if request.runtime_name != "":
+            runtime_class = request.runtime_name
+        else:
+            runtime_class = repo.get_workflow_template_default_runtime(request.workflow_name)
         try:
             container = Container.create(self.template_info.image_name,
                                          request.workflow_name,
@@ -100,7 +104,6 @@ class Template:
         assert block_name is not None
         res = None
         # self.lock.acquire()
-        print('get_idle_container size = ', len(self.idle_containers))
         if len(self.idle_containers) > 0:
             res = self.idle_containers[-1]
             res.idle_blocks_cnt -= 1
@@ -113,19 +116,22 @@ class Template:
     def put_idle_container(self, container):
         # self.lock.acquire()
         self.idle_containers.append(container)
-        print("idle container size = ", len(self.idle_containers))
         # self.num_exec -= 1
         # self.lock.release()
 
     def run_block(self, container: Container, request: RequestInfo):
         # self.upd(request.request_id, request.block_name, container)
         st = time.time()
+        self.lock.acquire()
         self.in_use_container_num += 1
+        self.lock.release()
         delay_time = container.run_block(request.request_id, request.workflow_name, request.template_name,
                                          request.templates_infos, request.block_name, request.block_inputs,
                                          request.block_infos)
         ed = time.time()
+        self.lock.acquire()
         self.in_use_container_num -= 1
+        self.lock.release()
         # print(request.request_id, request.template_name, delay_time)
         if self.template_info.gc == 'True' or self.template_info.gc == True:
             container.run_gc()
@@ -134,7 +140,7 @@ class Template:
             self.put_container(container)
         else:
             # TODO: 这里具体等待多久是一个值得测试的问题
-            gevent.spawn_later(1, self.put_container, container)
+            gevent.spawn_later(0, self.put_container, container)
         repo.save_latency(
             {'request_id': request.request_id, 'template_name': request.template_name, 'block_name': request.block_name,
              'phase': 'use_container', 'time': ed - st, 'st': st, 'ed': ed, 'cpu': self.cpus})
@@ -203,9 +209,15 @@ class Template:
             return
 
         # 目前系统负载很大，不再分配新的block
+        print('in_use_container_num = ', self.in_use_container_num, "idle container num = ", len(self.idle_containers))
         if self.in_use_container_num >= 50:
-            print('in_use_container_num = ', self.in_use_container_num, 'dispatch request later')
             # 睡眠一段时间
+            gevent.sleep(10)
+            return
+        
+        # 只是用提前准备好的空闲container
+        if len(self.idle_containers) == 0:
+            print('no idle container, still have', len(self.request_queue), 'requests')
             gevent.sleep(10)
             return
 
@@ -269,8 +281,8 @@ class Template:
         container.destroy()
         self.port_manager.put(container.port)
         
-    def prepare_idle_container(self, workflow_name, replicas=1):
-        request = RequestInfo('idle', workflow_name, 'idle', {}, 'idle', {}, {})
+    def prepare_idle_container(self, workflow_name, runtime_class_name, replicas=1):
+        request = RequestInfo('idle', workflow_name, 'idle', {}, 'idle', {}, {}, runtime_class_name)
         # 通过多线程并发地创建replicas个container
         threads = []
         for _ in range(replicas):

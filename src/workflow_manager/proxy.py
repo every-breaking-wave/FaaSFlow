@@ -127,7 +127,7 @@ def finish():
 def prepare_idle_container():
     print("data received = ", request.get_json(force=True, silent=True))
     data = request.get_json(force=True, silent=True)
-    dispatcher.manager.function_manager.prepare_idle_container(data['workflow_name'], data['replicas'])
+    dispatcher.manager.function_manager.prepare_idle_container(data['workflow_name'], data['runtime_class_name'], data['replicas'])
     return 'OK', 200
 
 

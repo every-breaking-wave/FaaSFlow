@@ -1,6 +1,15 @@
+# import debugpy
+
+# # 启动调试器。0.0.0.0 表示任何接口都能接受调试器的连接。5678 是调试器的端口。
+# debugpy.listen(('0.0.0.0', 5678))
+# print("Waiting for debugger attach")
+# debugpy.wait_for_client()  # 等待调试器连接
+# print("Debugger attached")
+
+
 from gevent import monkey
 
-monkey.patch_all()
+# monkey.patch_all()
 import time
 
 from gevent import event
@@ -31,7 +40,7 @@ worker_addrs = config.WORKER_ADDRS
 
 lock = threading.Lock()
 TIME_WINDOW = 60
-THRESHOLD = 2
+THRESHOLD = 1
 
 class RequestInfo:
     def __init__(self, request_id):
@@ -42,14 +51,6 @@ class RequestInfo:
 requests_info: Dict[str, RequestInfo] = {}
 workersp_url = 'http://{}:8000/{}'
 function_namespace = "function"
-
-
-def analyze_workflow(workflow_name: str):
-    logger.info("analyze workflow {}".format(workflow_name))
-    workflow_info = workflows_info[workflow_name]
-    # 从couchdb中获取workflow的最近的results和workflow_latency信息
-    latency_results = repo.get_latencies_by_phase_and_workflow_name('use_container', workflow_name)
-    cpu_data, memory_data = metrics_server.get_memory_metrics_by_name(workflow_name, function_namespace)
 
     
 @app.route('/run', methods=['POST'])
@@ -62,13 +63,16 @@ def run():
     requests_info[request_id] = RequestInfo(request_id)
     print("workflows info is", workflows_info)
     workflow_info = workflows_info[workflow_name]
+    #TODO: 此处的Window和Threshold具体如何设置需要进一步讨论
     if time.time() - workflow_info.timestamp > TIME_WINDOW:
         workflow_info.cnt = 1
     else:
         workflow_info.cnt += 1
     workflow_info.timestamp = time.time()
     if workflow_info.cnt > THRESHOLD:
-        threading.Thread(target=metrics_server.analyze_workflow, args=(workflow_name, )).start()
+        workflow_info.cnt = 0
+        threading.Thread(target=metrics_server.analyze_workflow, args=(workflow_info, )).start()
+
     worker_num = len(worker_addrs)
     templates_info = {}
     print("workflow_info.templates_infos", workflow_info.templates_infos)
@@ -118,15 +122,16 @@ def run():
         events.append(gevent.spawn(requests.post, remote_url, json=data))
         print("add event", remote_url)
     gevent.joinall(events)
-    result = requests_info[request_id].result.get()
+    # result = requests_info[request_id].result.get()
     ed = time.time()
-    return json.dumps({'result': result, 'latency': ed - st})
+    print("finish run", request_id)
+    return json.dumps({'result': "test", 'latency': ed - st})
 
 
 @app.route('/code_analyze', methods=['POST'])
 def analyze_func_code():
     inp = request.get_json(force=True, silent=True)
-    code = repo.get_workflow_code(inp['workflow_name'])
+    code = repo.get_workflow_template_code(inp['template_name'])
     # prompt = 'Analyze the following code and provide feedback:' + \
     #     'you should only consider whether it is cpu or memory intensive, whether it is io intensive, and whether it is network intensive.' + \
     #     'and whether it is secure sensitive, you should reply with a list of the above four items, each with a value of "yes" or "no".' + \
@@ -153,7 +158,7 @@ def analyze_func_code():
     # 先mock code_analyze的返回值为[yes, no, yes, no, yes, runc] 
     llm_response = ['yes', 'no', 'yes', 'no', 'yes', 'runc']
     # request信息中包含workflow的名字，从而将workflow:runtime的信息更新到couchdb中
-    repo.save_workflow_default_runtime(inp['workflow_name'], llm_response[-1])
+    repo.save_workflow_template_default_runtime(inp['template_name'], llm_response[-1])
     return 'OK', 200
     
 
@@ -173,21 +178,18 @@ def clear():
     requests_info.clear()
     return 'OK', 200
 
-@app.route('/prepare_container', methods=['POST'])
+@app.route('/prepare_idle_container', methods=['POST'])
 def prepare_container():
     inp = request.get_json(force=True, silent=True)
     workflow_name = inp['workflow_name']
+    runtime_class_name = inp['runtime_class_name']
     replicas = inp['replicas']
     print("prepare container", workflow_name, replicas)
     events = []
-    data = {'workflow_name': workflow_name, 'replicas': replicas}
+    data = {'workflow_name': workflow_name, 'runtime_class_name': runtime_class_name, 'replicas': replicas}
     for ip in worker_addrs:
         remote_url = workersp_url.format(ip, 'prepare_idle_container')
-        # headers = {'Connection': 'close'}
-        print("post to", remote_url)
-        print("data is", data)
         events.append(gevent.spawn(requests.post, remote_url, json=data))
-        print("add event", remote_url)
     gevent.joinall(events)
     return 'OK', 200
 

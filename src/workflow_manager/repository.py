@@ -46,7 +46,7 @@ class Repository:
     def save_redis_log(self, request_id, size, time):
         self.waiting_logs.append({'phase': 'redis', 'request_id': request_id, 'size': size, 'time': time})
         # self.couchdb['workflow_latency'].save({'phase': 'redis', 'request_id': request_id, 'size': size, 'time': time})
-
+        
     def get_latencies(self, phase):
         requests_logs = {}
         for k in self.couchdb['workflow_latency']:
@@ -79,50 +79,50 @@ class Repository:
         logger.info("get logs size {}".format(len(requests_logs)))
         return requests_logs
     
-    def save_workflow_default_runtime(self, workflow_name, runtime):
+    def save_workflow_template_default_runtime(self, template_name, runtime):
         # 保存workflow的默认runtime
         # 先读出原有json
         try:
-            workflow_info = self.couchdb['workflow_info'][workflow_name]
+            workflow_info = self.couchdb['workflow_info'][template_name]
             workflow_info['default_runtime'] = runtime
-            self.couchdb['workflow_info'][workflow_name] = workflow_info
+            self.couchdb['workflow_info'][template_name] = workflow_info
         except Exception:
-            self.couchdb['workflow_info'][workflow_name] = {'default_runtime': runtime}
+            self.couchdb['workflow_info'][template_name] = {'default_runtime': runtime}
             
-    def get_workflow_default_runtime(self, workflow_name):
+    def get_workflow_template_default_runtime(self, template_name):
         try:
-            return self.couchdb['workflow_info'][workflow_name]['default_runtime']
+            return self.couchdb['workflow_info'][template_name].get('default_runtime', 'runc')
         except Exception:
             return None
         
-    def save_workflow_code(self, workflow_name, code):
+    def save_workflow_template_code(self, template_name, code):
         try:
-            workflow_info = self.couchdb['workflow_info'][workflow_name]
+            workflow_info = self.couchdb['workflow_info'][template_name]
             workflow_info['code'] = code
-            self.couchdb['workflow_info'][workflow_name] = workflow_info
+            self.couchdb['workflow_info'][template_name] = workflow_info
         except Exception:
-            self.couchdb['workflow_info'][workflow_name] = {'code': code}
+            self.couchdb['workflow_info'][template_name] = {'code': code}
         
-    def get_workflow_code(self, workflow_name):
+    def get_workflow_template_code(self, template_name):
         try:
-            return self.couchdb['workflow_info'][workflow_name]['code']
+            return self.couchdb['workflow_info'][template_name]['code']
         except Exception:
             return None
         
-    def save_start_latency(self, latency, workflowname):
+    def save_start_latency(self, latency, template_name):
         # 每次为一个workflow启动一个pod的时候，我们记录下来这个启动的latency在workflow_info中，保存在一个list中
         # 为了方便查询，我们只保留最近的100个
         try:
-            start_latencies = self.couchdb['workflow_info'][workflowname]['start_latencies']
+            start_latencies = self.couchdb['workflow_info'][template_name]['start_latencies']
         except Exception:
             start_latencies = []
         start_latencies.append(latency)
         if len(start_latencies) > 100:
             start_latencies = start_latencies[-100:]
-        self.couchdb['workflow_info'][workflowname]['start_latencies'] = start_latencies
+        self.couchdb['workflow_info'][template_name]['start_latencies'] = start_latencies
         
-    def get_start_latencies(self, workflow_name):
-        start_latencies = self.couchdb['workflow_info'][workflow_name].get('start_latencies', [])
+    def get_start_latencies(self, template_name):
+        start_latencies = self.couchdb['workflow_info'][template_name].get('start_latencies', [])
         if start_latencies == []:
             return 0
         average_latency = sum(start_latencies) / len(start_latencies)

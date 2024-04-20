@@ -16,6 +16,7 @@ import threading
 gateway_url = 'http://' + config.GATEWAY_URL + '/{}'
 
 workflow_name = 'linpack'
+runtime_class_name = 'kata-qemu'
 replicas = 20
 
 
@@ -24,25 +25,26 @@ def clean_worker(addr):
     assert r.status_code == 200
     
 
-def post_request(request_id, workflow_name, replicas):
+def post_request(request_id, workflow_name, runtime_class_name, replicas):
     request_info = {'request_id': request_id,
                     'workflow_name': workflow_name,
+                    'runtime_class_name': runtime_class_name,
                     'replicas': replicas,
                 }
 
     # print('--firing--', request_id)
     st = time.time()
-    print("request_id", request_id, "workflow_name", workflow_name, "st", st)
-    r = requests.post(gateway_url.format('prepare_container'), json=request_info)
+    print("request_id", request_id, "workflow_name", workflow_name, "runtime_class_name", runtime_class_name, "replicas", replicas)
+    r = requests.post(gateway_url.format('prepare_idle_container'), json=request_info)
 
 
-threads_ = []
-for addr in config.WORKER_ADDRS:
-    t = threading.Thread(target=clean_worker, args=(addr, ))
-    threads_.append(t)
-    t.start()
+# threads_ = []
+# for addr in config.WORKER_ADDRS:
+#     t = threading.Thread(target=clean_worker, args=(addr, ))
+#     threads_.append(t)
+#     t.start()
 
-for t in threads_:
-    t.join()
+# for t in threads_:
+#     t.join()
 
-post_request('request_' + '0', workflow_name, 10)
+post_request('request_' + '0', workflow_name, runtime_class_name, 10)

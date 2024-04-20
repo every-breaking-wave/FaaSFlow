@@ -68,27 +68,28 @@ class Container:
                                 protocol="TCP", container_port=5000, host_port=int(port)
                             )
                         ],
-                        resources=client.V1ResourceRequirements(
-                            limits={"cpu": str(cpus)}
-                        ),
-                        volume_mounts=[
-                            client.V1VolumeMount(
-                                mount_path=work_dir, name="work-volume"
-                            )
-                        ],
+                        # resources=client.V1ResourceRequirements(
+                        #     limits={"cpu": str(cpus), "memory": "1.2Gi"},
+                        #     requests={"cpu": str(cpus/2), "memory": "1Gi"},
+                        # ),
+                        # volume_mounts=[
+                        #     client.V1VolumeMount(
+                        #         mount_path=work_dir, name="work-volume"
+                        #     )
+                        # ],
                         security_context=client.V1SecurityContext(
                             capabilities=client.V1Capabilities(add=["NET_ADMIN"])
                         ),
                     )
                 ],
-                volumes=[
-                    client.V1Volume(
-                        name="work-volume",
-                        host_path=client.V1HostPathVolumeSource(
-                            path=host_path, type="Directory"
-                        ),
-                    )
-                ],
+                # volumes=[
+                #     client.V1Volume(
+                #         name="work-volume",
+                #         host_path=client.V1HostPathVolumeSource(
+                #             path=host_path, type="Directory"
+                #         ),
+                #     )
+                # ],
                 runtime_class_name=runtime_class,
             ),
         )

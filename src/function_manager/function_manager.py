@@ -95,9 +95,8 @@ class FunctionManager:
         )
         pass
 
-    def prepare_idle_container(self, workflow_name, replicas=1):
-        # 遍历所有以workflow开头的templates
+    def prepare_idle_container(self, workflow_name, runtime_class_name, replicas=1):
         for template in self.templates:
-            print("template:", template)
             if template.startswith(workflow_name):
-                self.templates[template].prepare_idle_container(workflow_name, replicas)
+                print("prepare idle container for template:", template)
+                self.templates[template].prepare_idle_container(workflow_name, runtime_class_name, replicas)
