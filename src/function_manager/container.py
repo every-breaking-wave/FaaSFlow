@@ -50,6 +50,8 @@ class Container:
             + "-"
             + "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
         )
+        # 将pod_name中的下划线删除
+        pod_name = pod_name.replace("_", "-")
         kube_config.load_kube_config(k3s_kube_config_path)
         # TODO: host_path may need to be changed
         host_path = "./"
@@ -60,7 +62,7 @@ class Container:
             spec=client.V1PodSpec(
                 containers=[
                     client.V1Container(
-                        name=image_name,
+                        name=pod_name,
                         image=image_name,
                         image_pull_policy="IfNotPresent",
                         ports=[

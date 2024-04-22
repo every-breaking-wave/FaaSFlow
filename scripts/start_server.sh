@@ -23,17 +23,13 @@ start() {
 
     # 这部分代码必需置于test_prepare_idle之前
     sleep 5
-    workflow_name=linpack
-    python src/utils/code_utils.py $workflow_name benchmark/template_functions/$workflow_name/blocks/block_0/main.py 
-
+    workflow_name=wordcount
+    python src/utils/code_utils.py $workflow_name
 
     # 启动测试
     cd test
     
     python3 test_prepare_idle.py
-
-
-
     # 去除了下面代码中的clear，因为test_prepare_idle.py中已经清除了
     # python3 async_test.py > ../logs/test.log 2>&1 &
 }

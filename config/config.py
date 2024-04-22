@@ -20,10 +20,10 @@ FUNCTIONS_INFO_PATH = '../../benchmark'
 WORKFLOWS_INFO_PATH = {
                        'linpack': os.path.expanduser(f'{WORK_DIR}/benchmark/linpack'),
                        'image-processing': os.path.expanduser(f'{WORK_DIR}/benchmark/image-processing'),
-                    #    'video': os.path.expanduser('~/FaaSFlow/benchmark/video'),
-                    #    'wordcount': os.path.expanduser('~/FaaSFlow/benchmark/wordcount'),
-                    #    'recognizer': os.path.expanduser('~/FaaSFlow/benchmark/recognizer'),
-                    #    'svd': os.path.expanduser('~/FaaSFlow/benchmark/svd'),
+                    #    'video': os.path.expanduser(f'{WORK_DIR}/benchmark/video'),
+                       'wordcount': os.path.expanduser(f'{WORK_DIR}/benchmark/wordcount'),
+                    #    'recognizer': os.path.expanduser(f'{WORK_DIR}/benchmark/recognizer'),
+                    #    'svd': os.path.expanduser(f'{WORK_DIR}/benchmark/svd'),
                        }
 if os.path.exists('/state/partition2/FaaSFlow'):
     PREFETCH_POOL_PATH = '/state/partition2/FaaSFlow/prefetch_pool'

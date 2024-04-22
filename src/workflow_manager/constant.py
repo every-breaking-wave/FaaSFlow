@@ -2,10 +2,11 @@
 
 # 不同runtime对应的平均start latency
 runtime_to_start_latency = {
-    "runc": 0.5,
-    "kata-qemu": 0.8,
-    "kata-dragonball": 0.7,
-    "kata-fc": 0.6,
+    "runc": 0.366,
+    "kata-qemu": 1.261,
+    "kata-dragonball": 1.955,
+    "gvisor": 1.070,
+    "kata-fc": 9999,
 }
 
 
