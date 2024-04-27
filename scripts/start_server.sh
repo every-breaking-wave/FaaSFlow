@@ -11,7 +11,7 @@ start() {
 
     python3 gateway.py localhost 7000  &
 
-    sleep 5
+    sleep 3
 
     sudo python3 test_server.py localhost &
 
@@ -26,10 +26,10 @@ start() {
     workflow_name=wordcount
     python src/utils/code_utils.py $workflow_name
 
-    # 启动测试
+    # # # 启动测试
     cd test
     
-    python3 test_prepare_idle.py
+    python3 test_prepare_idle.py $workflow_name runc 10
     # 去除了下面代码中的clear，因为test_prepare_idle.py中已经清除了
     # python3 async_test.py > ../logs/test.log 2>&1 &
 }

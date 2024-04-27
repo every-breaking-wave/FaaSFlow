@@ -55,6 +55,9 @@ class  MetricsServer:
         cpu_usage_rate_list = self.custom_query_range(cpu_query, parse_datetime("3m"), parse_datetime("now"), '60s')
         # 获取这个dict中的key为'value'的值
         print('cpu_usage_rate_list:', cpu_usage_rate_list)
+        if len(cpu_usage_rate_list) == 0:
+            print('get_cpu_usage_rate_by_name: no data in last 60s')
+            return 0
         cpu_usage_rate_list = [x['values'] for x in cpu_usage_rate_list][-1]
         cpu_usage_rate_list = [float(x[1]) for x in cpu_usage_rate_list]
         cpu_usage_rate = sum(cpu_usage_rate_list) / len(cpu_usage_rate_list)
@@ -66,6 +69,9 @@ class  MetricsServer:
         memory_query = f'sum(rate(container_memory_usage_bytes{{namespace="{namespace}",pod=~"{workflow_name}.*"}}[1m])) '
         memory_usage_list = self.custom_query_range(memory_query, parse_datetime("3m"), parse_datetime("now"), '60s')
         print('memory_usage_list:', memory_usage_list)
+        if len(memory_usage_list) == 0:
+            print('get_memory_metrics_by_name: no data in last 60s')
+            return 0
         memory_usage_list = [x['values'] for x in memory_usage_list][-1]
         memory_usage_list = [float(x[1]) for x in memory_usage_list]
         memory_usage = sum(memory_usage_list) / len(memory_usage_list)

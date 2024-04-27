@@ -95,8 +95,13 @@ class FunctionManager:
         )
         pass
 
-    def prepare_idle_container(self, workflow_name, runtime_class_name, replicas=1):
-        for template in self.templates:
-            if template.startswith(workflow_name):
-                print("prepare idle container for template:", template)
-                self.templates[template].prepare_idle_container(workflow_name, runtime_class_name, replicas)
+    # def prepare_idle_container(self, workflow_name, runtime_class_name, replicas=1):
+    #     for template in self.templates:
+    #         if template.startswith(workflow_name):
+    #             print("prepare idle container for template:", template)
+                
+
+    def create_template_container(self, template_info, runtime_class_name, replicas=1):
+        print("create template container, template_info is:", template_info)
+        template_name = template_info['template_name'] 
+        self.templates[template_name].prepare_idle_container(template_info, runtime_class_name, replicas)

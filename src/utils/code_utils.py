@@ -42,4 +42,4 @@ if __name__ == '__main__':
                         print(f'uploading code {code_path}')
                         template_name = dir
                         upload_code_to_couchdb(template_name, code_path)
-                        code_analysis(sys.argv[1])
+                        code_analysis(template_name)

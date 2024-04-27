@@ -16,4 +16,6 @@ for wc in counts:
 # ed = time.time()
 # store.post('compute', {'st': st, 'ed': ed}, debug=True)
 # time.sleep(0.1)
+# 打印res
+print(res)
 store.post('res', len(res))

@@ -38,6 +38,7 @@ class Dispatcher:
                                            from_virtual)
 
     def receive_incoming_request(self, request_id, workflow_name, templates_info):
+        print("receive incoming request", request_id, workflow_name, templates_info)
         self.manager.init_incoming_request(request_id, workflow_name, templates_info)
 
 
@@ -127,7 +128,7 @@ def finish():
 def prepare_idle_container():
     print("data received = ", request.get_json(force=True, silent=True))
     data = request.get_json(force=True, silent=True)
-    dispatcher.manager.function_manager.prepare_idle_container(data['workflow_name'], data['runtime_class_name'], data['replicas'])
+    dispatcher.manager.prepare_idle_container(data['workflow_name'], data['runtime_class_name'], data['replicas'])
     return 'OK', 200
 
 

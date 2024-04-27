@@ -60,4 +60,4 @@ def handle(data):
         }
     }
 
-print(handle('{"number": 10000, "uuid": "1234"}'))
+print(handle('{"number": 7500, "uuid": "1234"}'))

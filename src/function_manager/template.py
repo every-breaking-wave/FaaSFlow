@@ -73,8 +73,13 @@ class Template:
         # st = time.time()
         runtime_class = ""
         if request.runtime_name != "":
+            print("choose runtime by request")
             runtime_class = request.runtime_name
+        elif request.block_infos.get('runtime') is not None:
+            print("choose runtime by block_infos")
+            runtime_class = request.block_infos['runtime']
         else:
+            print("choose runtime by template default")
             runtime_class = repo.get_workflow_template_default_runtime(request.workflow_name)
         try:
             container = Container.create(self.template_info.image_name,
@@ -92,8 +97,11 @@ class Template:
             return None
         assert container.idle_blocks_cnt > 0
         if use is True:
+            print(f'put container {self.template_info.image_name} into in_use_containers')
             container.idle_blocks_cnt -= 1
+            return container
         if container.idle_blocks_cnt > 0:
+            print(f'put container {self.template_info.image_name} into idle_containers')
             self.put_idle_container(container)
         # self.lock.release()
         # container.running_blocks.add(block_name)
@@ -209,19 +217,22 @@ class Template:
             return
 
         # 目前系统负载很大，不再分配新的block
-        print('in_use_container_num = ', self.in_use_container_num, "idle container num = ", len(self.idle_containers))
-        if self.in_use_container_num >= 50:
-            # 睡眠一段时间
-            gevent.sleep(10)
-            return
+        # print('in_use_container_num = ', self.in_use_container_num, "idle container num = ", len(self.idle_containers))
+        # if len(self.idle_containers) == 0 and self.in_use_container_num >= 10:
+        #     # 睡眠一段时间
+        #     gevent.sleep(10)
+        #     return
         
         # 只是用提前准备好的空闲container
-        if len(self.idle_containers) == 0:
-            print('no idle container, still have', len(self.request_queue), 'requests')
+        if len(self.idle_containers) == 0 :
+            # 获取这个request的信息
+            # request = self.request_queue.pop(0)
+            # print('no idle container, still have', len(self.request_queue), 'requests')
+            # print("dispatch_request", request.block_name, request.template_name, request.request_id, 'is the left request')
             gevent.sleep(10)
             return
 
-        request = self.request_queue.pop(0)
+        request : RequestInfo = self.request_queue.pop(0)
         # print('Allocating a block...')
         
         print("dispatch_request", request.block_name, request.template_name, request.request_id, 'is using idle block')
@@ -281,14 +292,23 @@ class Template:
         container.destroy()
         self.port_manager.put(container.port)
         
-    def prepare_idle_container(self, workflow_name, runtime_class_name, replicas=1):
-        request = RequestInfo('idle', workflow_name, 'idle', {}, 'idle', {}, {}, runtime_class_name)
+    def prepare_idle_container(self, template_info, runtime_class_name, replicas=1):
+        templates_infos = {}
+        templates_infos[template_info['template_name']] = template_info
+        block_infos = template_info['blocks']['block_0']
+        request = RequestInfo('idle', 'idle', 'idle', {}, 'idle', {}, block_infos, runtime_class_name)
         # 通过多线程并发地创建replicas个container
         threads = []
         for _ in range(replicas):
             t = threading.Thread(target=self.create_container, args=(request, False, ))
             threads.append(t)
             t.start()
+        # 此处如果等待所有线程结束，但时间不超过60s
+        st = time.time()
         for t in threads:
-            t.join()
-        print('prepare_idle_container success!')
+            t.join(60000)
+        ed = time.time()
+        print('prepare_idle_container successful', ed - st)
+        return
+    
+    

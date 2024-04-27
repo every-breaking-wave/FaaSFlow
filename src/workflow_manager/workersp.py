@@ -132,7 +132,7 @@ class WorkerSPManager:
         output_type = data_infos['output_type']
         workflow_state = self.workflows_state[request_id]
         if output_type == 'FOREACH':
-
+            logger.info('flow_data FOREACH: {}, {}, {}, {}, {}, {}'.format(request_id, workflow_name, dest_template_name, dest_block_name, dest_data_name, data_infos))
             # Todo. Currently assume foreach Vars can directly trigger, i.e. No other on-trip Vars.
             input_datas = {dest_data_name: data_infos}
             for k, v in workflow_state.templates_blocks_inputDatas[dest_template_name][dest_block_name].items():
@@ -141,14 +141,18 @@ class WorkerSPManager:
             self.trigger_normal(request_id, workflow_name, dest_template_name, dest_block_name, input_datas)
             return
         elif output_type == 'MERGE':
+            logger.info('flow_data MERGE: {}, {}, {}, {}, {}, {}'.format(request_id, workflow_name, dest_template_name, dest_block_name, dest_data_name, data_infos))
             input_datas = workflow_state.templates_blocks_inputDatas[dest_template_name][dest_block_name]
+            print('input_datas:', input_datas)
             # workflow_state.lock.acquire()
             if dest_data_name not in input_datas:
                 input_datas[dest_data_name] = {}
             data_infos['output_type'] = 'NORMAL'
             while 'VIRTUAL.CNT' not in input_datas:
+                print('wait for VIRTUAL.CNT')
                 gevent.sleep(0.003)
             input_datas[dest_data_name][data_infos['serial_num']] = data_infos
+            print('len input datas:', len(input_datas[dest_data_name]), input_datas['VIRTUAL.CNT']['val'])
             if len(input_datas[dest_data_name]) == input_datas['VIRTUAL.CNT']['val']:
                 # all split data has arrived, then trigger!
                 workflow_state.templates_blocks_input_cnt[dest_template_name][dest_block_name] += 1
@@ -187,6 +191,7 @@ class WorkerSPManager:
             workflow_state.lock.release()
             self.trigger_block_local(request_id, workflow_name, dest_template_name, dest_block_name)
         else:
+            print('wait for input datas: ', workflow_state.templates_blocks_input_cnt[dest_template_name][dest_block_name])
             workflow_state.lock.release()
 
     def prefetch_kafka_data(self, datainfo: DataInfo):
@@ -293,7 +298,6 @@ class WorkerSPManager:
     def dispatch_incoming_data(self):
         gevent.spawn_later(dispatch_interval, self.dispatch_incoming_data)
         if len(self.incoming_data_queue) > 0:
-            logger.info('len: {}'.format(len(self.incoming_data_queue)))
             data = self.incoming_data_queue.pop(0)
         else:
             return
@@ -319,6 +323,7 @@ class WorkerSPManager:
         data_infos['from_template_name'] = data.template_name
         data_infos['from_block_name'] = data.block_name
         if data.template_name == 'global_inputs':
+            logger.info('global_inputs: {}, {}, {}, {}'.format(request_id, workflow_name, data.template_name, data.block_name))
             st = time.time()
             global_inputs = workflow_info.data['global_inputs']
             for dest_template_name, dest_template_infos in global_inputs[data_name]['dest'].items():
@@ -344,7 +349,9 @@ class WorkerSPManager:
                 raise Exception('undefined block type: ', block_info['type'])
             prefetched_status = 'NA'
             for dest_template_name, dest_template_infos in dest.items():
+                logger.info('dest_template_name: {}'.format(dest_template_name))
                 if dest_template_name == '$USER':
+                    logger.info('dest is $USER')
                     if data_infos['datatype'] != 'metadata':
                         # Todo: regular clean should be triggered by the gateway
                         # gevent.spawn_later(5, self.clean_request, request_id)
@@ -352,6 +359,7 @@ class WorkerSPManager:
                     continue
                 target_ip = request_info.templates_infos[dest_template_name]['ip']
                 if target_ip == self.host_addr or target_ip == '127.0.0.1':
+                    logger.info('dest is local')
                     # if data_infos['datatype'] == 'metadata':
                     #     # continue
                     #     # Try affinity scheduling
@@ -366,6 +374,7 @@ class WorkerSPManager:
                             self.flow_data(request_id, workflow_name, dest_template_name, dest_block_name,
                                            dest_data_name, data_infos, offset)
                 elif data.from_local is True and data_infos['datatype'] != 'metadata':
+                    logger.info('data from local, dest is remote')
                     if target_ip not in already_transfered_ips:
                         already_transfered_ips.add(target_ip)
                         gevent.spawn(self.send_data_remote, target_ip, request_id, workflow_name, data.template_name,
@@ -411,7 +420,7 @@ class WorkerSPManager:
     #     pass
 
     def trigger_switch(self, request_id, workflow_name, template_name, block_name):
-        logger.info('trigger_switch: {}, {}, {}, {}'.format(request_id, workflow_name, template_name, block_name))
+        # logger.info('trigger_switch: {}, {}, {}, {}'.format(request_id, workflow_name, template_name, block_name))
         input_datas = self.workflows_state[request_id].templates_blocks_inputDatas[template_name][block_name]
         ctx = {}
         for data_name, data_infos in input_datas.items():
@@ -429,7 +438,7 @@ class WorkerSPManager:
         raise Exception('virtual switch branch not match')
 
     def check_input_db_data(self, request_id, datainfo):
-        logger.info('check_input_db_data: {}, {}'.format(request_id, datainfo))
+        # logger.info('check_input_db_data: {}, {}'.format(request_id, datainfo))
         workflow_state = self.workflows_state[request_id]
         if datainfo['datatype'] in ['couch_data_ready', 'kafka_data_ready']:
             db_key = datainfo['db_key']
@@ -437,7 +446,7 @@ class WorkerSPManager:
             datainfo['datatype'] = 'disk_data_ready'
 
     def check_input_datas(self, request_id, workflow_name, template_name, block_name, input_datas):
-        logger.info('check_input_datas: {}, {}, {}, {}, {}'.format(request_id, workflow_name, template_name, block_name, input_datas))
+        # logger.info('check_input_datas: {}, {}, {}, {}, {}'.format(request_id, workflow_name, template_name, block_name, input_datas))
         input_datas_infos = self.workflows_info[workflow_name].templates_infos[template_name]['blocks'][block_name][
             'input_datas']
         workflow_state = self.workflows_state[request_id]
@@ -457,13 +466,18 @@ class WorkerSPManager:
             input_datas = self.workflows_state[request_id].templates_blocks_inputDatas[template_name][block_name]
         self.check_input_datas(request_id, workflow_name, template_name, block_name, input_datas)
         # Todo: the ip address of template_info may be modified.
+        template_info = self.requests_info[request_id].templates_infos[template_name]
+        # 将workflow_info中的额外信息输入template_info
+        for k, v in self.workflows_info[workflow_name].templates_infos[template_name].items():
+            template_info[k] = v
+        logger.info('template_info: {}'.format(template_info))
         self.function_manager.allocate_block(request_id, workflow_name, template_name,
                                              self.requests_info[request_id].templates_infos, block_name, input_datas,
                                              self.workflows_info[workflow_name].templates_infos[template_name][
                                                  'blocks'][block_name])
 
     def send_data_remote(self, remote_addr, request_id, workflow_name, template_name, block_name, datas, from_virtual):
-        logger.info('send_data_remote: {}, {}, {}, {}, {}, {}'.format(remote_addr, request_id, workflow_name, template_name, block_name, datas))
+        # logger.info('send_data_remote: {}, {}, {}, {}, {}, {}'.format(remote_addr, request_id, workflow_name, template_name, block_name, datas))
         remote_url = 'http://{}:8000/transfer_data'.format(remote_addr)
         data = {'request_id': request_id,
                 'workflow_name': workflow_name,
@@ -472,3 +486,10 @@ class WorkerSPManager:
                 'datas': datas,
                 'from_virtual': from_virtual}
         requests.post(remote_url, json=data)
+
+
+    def prepare_idle_container(self, workflow_name, runtime_class_name, replicas=1):
+        # logger.info('prepare_idle_container: {}, {}, {}'.format(workflow_name, runtime_class_name, replicas))
+        for template_name, template_info in self.workflows_info[workflow_name].templates_infos.items():
+            if template_name.startswith(workflow_name):
+                self.function_manager.create_template_container(template_info, runtime_class_name, replicas)

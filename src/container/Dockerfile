@@ -15,7 +15,8 @@ EXPOSE 5000
 
 RUN apt clean
 RUN apt update
-RUN apt install -y iproute2
+RUN apt install -y iproute2 procps net-tools iputils-ping curl vim 
+
 RUN pip3 install --no-cache-dir gevent flask requests couchdb redis gipc kafka-python confluent_kafka
 
 CMD ["python3", "/proxy/proxy.py"]

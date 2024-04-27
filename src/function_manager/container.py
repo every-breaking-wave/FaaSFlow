@@ -114,7 +114,7 @@ class Container:
             if pod.status.phase == "Running":
                 end_time = time.time()
                 # 记录pod的启动时间
-                repo.save_start_latency(end_time - start_time, workflow_name)
+                repo.save_start_latency(end_time - start_time, image_name)
                 print(f"Pod {pod_name} is running.")
                 break
             else:
@@ -236,6 +236,7 @@ class Container:
             "block_infos": block_infos,
             "chunk_size": config.CHUNK_SIZE,
         }
+        print('run block ,data is:', data)
         # print(template_name, block_name, 'container still has idle block?:', self.idle_blocks_cnt)
         print(
             "run block post url",

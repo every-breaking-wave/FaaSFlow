@@ -9,6 +9,7 @@ templates:
     blocks:
       block_0:
         type: NORMAL
+        runtime: runc
         input_datas:
           start: { type: NORMAL }
         output_datas:
@@ -24,6 +25,7 @@ templates:
     blocks:
       block_0:
         type: NORMAL
+        runtime: kata-qemu
         input_datas:
           file: { type: NORMAL }
         output_datas:
@@ -35,6 +37,7 @@ templates:
     blocks:
       block_0:
         type: NORMAL
+        runtime: runc
         input_datas:
           VIRTUAL.CNT: { type: NORMAL }
           counts: { type: LIST }

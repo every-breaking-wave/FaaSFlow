@@ -26,6 +26,7 @@ class WorkflowInfo:
             # functions_predecessors = {}
             templates_infos = {}
             for template_name, template_infos in data['templates'].items():
+                template_infos['template_name'] = template_name
                 templates_infos[template_name] = template_infos
                 if template_name == 'VIRTUAL':
                     # Todo: What is for virtual?
