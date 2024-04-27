@@ -130,3 +130,23 @@ class Repository:
 
     def is_workflow_exist(self, workflow_name):
         return workflow_name in self.couchdb['workflow_info']
+
+    def save_request_start_time(self, request_id):
+        # 如果request_id已经存在，先删除
+        if request_id in self.couchdb['results']:
+            self.couchdb['results'].delete(self.couchdb['results'][request_id])
+        self.couchdb['results'][request_id] = {'st': time.time()}
+        
+    def save_request_end_time(self, request_id):
+        request_info = self.couchdb['results'][request_id]
+        request_info['et'] = time.time()
+        self.couchdb['results'][request_id] = request_info
+        
+    def save_request_execution_time(self, request_id):
+        request_info = self.couchdb['results'][request_id]
+        request_info['execution_time'] = request_info['et'] - request_info['st']
+        self.couchdb['results'][request_id] = request_info
+        
+    def check_flow_over(self, request_id):
+        # 如果execution_time存在，说明已经结束
+        return 'execution_time' in self.couchdb['results'][request_id]

@@ -113,7 +113,9 @@ def get_use_container_log(workflow_name, lambd, tests_duration):
     filepath = os.path.join('result', nowtime + '_' + suffix + '.json')
     with open(filepath, 'w') as f:
         json.dump(save_logs, f)
-
+    
+    # 修改文件权限
+    os.system(f'chmod 777 {filepath}')
 
 def cal_percentile():
     percents = [5, 30, 50, 90, 95, 99]
@@ -143,6 +145,7 @@ def send_poisson_requests(lambd, num_requests):
     :param num_requests: 要发送的请求总数
     """
     repo.clear_couchdb_workflow_latency()
+    repo.clear_couchdb_results()
 
     # 生成num_requests个符合指数分布的间隔时间
     intervals = np.random.exponential(scale=1/lambd, size=num_requests)
@@ -159,19 +162,25 @@ def send_poisson_requests(lambd, num_requests):
         # t.start()
 
     # 执行 ../script/start_server.sh stop
-    os.system('bash ../scripts/start_server.sh stop')
+    # os.system('bash ../scripts/start_server.sh stop')
 
     print("finish post all requests")
     gevent.wait()
     print("finish wait")
-    time.sleep(5)
+    # 判断是否所有的请求都已经处理结束
+    for id in ids:
+        while True:
+            try:
+                if repo.check_flow_over(id):
+                    break
+            except Exception as e:
+                print(e)
+            time.sleep(1)
     # for t in threads:
     #     t.join(timeout=20)
 
     print("All requests sent.")
     print('total requests count:', len(latencies))
-    get_use_container_log(workflow_name, lambd, duration)
-    cal_percentile()
 
 
 if __name__ == "__main__":
@@ -182,6 +191,8 @@ if __name__ == "__main__":
     num_requests = duration * lambd
     # post_request('request_0000', workflow_name)
     send_poisson_requests(lambd, num_requests)
+    get_use_container_log(workflow_name, lambd, duration)
+    cal_percentile()
 
 
 # 写一条sh命令，删除所有exit的容器

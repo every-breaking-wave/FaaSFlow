@@ -90,6 +90,8 @@ def run():
     for template_info in templates_info.values():
         ips.add(template_info['ip'])
     st = time.time()
+    # 讲开始的时间戳写入到couchdb中
+    repo.save_request_start_time(request_id)
     # 1. transmit request_info to all relative nodes
     events = []
     for ip in ips:
@@ -169,6 +171,8 @@ def post_user_data():
     datas = inp['datas']
     # print(datas)
     requests_info[request_id].result.set(datas)
+    repo.save_request_end_time(request_id)
+    repo.save_request_execution_time(request_id)
     return 'OK', 200
 
 
